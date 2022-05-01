@@ -1,0 +1,59 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: unsealer-cron-vault-poc
+  namespace: vault
+  labels:
+    app: unsealer-cron-vault-poc
+    config: udaan
+spec:
+  schedule: "* * * * *"
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            config: udaan
+        spec:
+          serviceAccountName: vault-auto-unsealer
+          volumes:
+            - name: unseal
+              configMap:
+                name: unseal
+                defaultMode: 0755
+          containers:
+          - name: unsealer-cron-vault-poc
+            image: bitnami/kubectl:latest
+            env:
+              - name: KEY_1
+                valueFrom:
+                  secretKeyRef:
+                    name: vault-unseal-keys
+                    key: key_1
+              - name: KEY_2
+                valueFrom:
+                  secretKeyRef:
+                    name: vault-unseal-keys
+                    key: key_2
+              - name: KEY_3
+                valueFrom:
+                  secretKeyRef:
+                    name: vault-unseal-keys
+                    key: key_3
+            volumeMounts:
+              - name: unseal
+                mountPath: /usr/local/bin
+            resources:
+              limits:
+                memory: 1Gi
+                cpu: 300m
+              requests:
+                memory: 1Gi
+                cpu: 300m
+            imagePullPolicy: IfNotPresent
+            command:
+            - /bin/bash
+            - -c
+            - "/usr/local/bin/unseal vault vault-test"
+#            args: ["vault", "vault-poc"]
+          restartPolicy: Never
